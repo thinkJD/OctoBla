@@ -23,7 +23,11 @@ class OctoBla_Sounds(restful.Resource):
 
 api.add_resource(OctoBla_Sounds, '/Sounds')
 
-# api.add_resource(HelloWorld, '/<string:song_id>')
+class OctoBla_Play(restful.Resource):
+    def get(self, song_id):
+        soundhandler.play_sound(song_id)
+
+api.add_resource(OctoBla_Play, '/play/<string:song_id>')
 
 def main():
     global soundhandler

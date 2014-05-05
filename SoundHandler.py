@@ -16,7 +16,7 @@ import Sound
 
 class SoundHandler(object):
     def __init__(self):
-        #self.player = pyglet.media.Player()
+        self.player = pyglet.media.Player()
         self.sounds = dict()
         self.base_path = os.path.dirname(__file__)
         self.load_sounds(os.path.join(self.base_path, "Sounds"))
@@ -25,13 +25,15 @@ class SoundHandler(object):
         pass
 
     def play(self):
-        self.player.play()
+        pass
 
     def stop_playback(self):
         pass
 
     def play_sound(self, sound_id):
-        pass
+        self.sounds[sound_id].get_sound().play()
+        self.sounds[sound_id].get_sound().stop()
+
 
     def get_ids(self):
         return self.sounds.keys()
