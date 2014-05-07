@@ -26,15 +26,16 @@ api.add_resource(OctoBla_Sounds, '/Sounds')
 class OctoBla_Play(restful.Resource):
     def get(self, song_id):
         soundhandler.play_sound(song_id)
+        return "Done!"
 
 api.add_resource(OctoBla_Play, '/play/<string:song_id>')
 
 def main():
     global soundhandler
     soundhandler = sh.SoundHandler()
-    # debug only accessible from localhost
+    # debug. only accessible from localhost
     app.run(debug=True)
-    # global accessible
+    # global accessible with optional ip range filter
     #app.run(host='0.0.0.0')
 
 if __name__ == "__main__":

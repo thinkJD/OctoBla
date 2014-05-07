@@ -6,9 +6,9 @@
 #                                                        Jan-Daniel Georgens
 # ---------------------------------------------------------------------------
 
-import pyglet
-pyglet .options['shadow_window'] = False
 import os
+import pyglet
+pyglet.options['shadow_window'] = False
 import os.path
 import glob
 import Sound
@@ -16,7 +16,6 @@ import Sound
 
 class SoundHandler(object):
     def __init__(self):
-        self.player = pyglet.media.Player()
         self.sounds = dict()
         self.base_path = os.path.dirname(__file__)
         self.load_sounds(os.path.join(self.base_path, "Sounds"))
@@ -31,8 +30,14 @@ class SoundHandler(object):
         pass
 
     def play_sound(self, sound_id):
-        self.sounds[sound_id].get_sound().play()
-        self.sounds[sound_id].get_sound().stop()
+        sound = self.sounds[sound_id].get_sound()
+        player = pyglet.media.Player()
+        player.queue(sound)
+        player.eos_action = player.EOS_PAUSE
+        player.play()
+        while player.playing:
+            pyglet.clock.tick()
+        player.pause()
 
 
     def get_ids(self):
@@ -46,7 +51,7 @@ class SoundHandler(object):
 
         old_dir = os.getcwd()
         os.chdir(base_path)
-        #todo pyglet can handle much mord filetypes as wave. Implement all formats
+        # todo pyglet can handle much mord filetypes as wave. Implement all formats
         print "Load Sounds:"
         for sound_file in glob.glob("*.wav"):
             sound_id = sound_file.split('.')[0]
