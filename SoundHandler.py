@@ -18,32 +18,38 @@ class SoundHandler(object):
     def __init__(self):
         self.sounds = dict()
         self.base_path = os.path.dirname(__file__)
-        self.load_sounds(os.path.join(self.base_path, "Sounds"))
+        self.__load_sounds__(os.path.join(self.base_path, "Sounds"))
 
-    def queue_sound(self, sound_id):
-        pass
+    def __get_sound__(self, sound_id):
+        return self.sounds[sound_id].get_sound()
 
     def play(self):
-        pass
+        if not self.sound_queue:
+            return
 
-    def stop_playback(self):
-        pass
-
-    def play_sound(self, sound_id):
-        sound = self.sounds[sound_id].get_sound()
         player = pyglet.media.Player()
-        player.queue(sound)
-        player.eos_action = player.EOS_PAUSE
+        for sound in self.sound_queue:
+            player.queue(sound)
         player.play()
+        self.__wait_for_player__(player)
+
+    def __wait_for_player__(self, player):
         while player.playing:
             pyglet.clock.tick()
-        player.pause()
 
+    def play_sound(self, sound_id):
+        sound = self.__get_sound__(sound_id)
+
+        player = pyglet.media.Player()
+        player.queue(sound)
+        player.play()
+        player.eos_action = player.EOS_PAUSE
+        self.__wait_for_player__(player)
 
     def get_ids(self):
         return self.sounds.keys()
 
-    def load_sounds(self, base_path):
+    def __load_sounds__(self, base_path):
         """Load sounds from a given directory use the filename without extension as ID."""
         if not os.path.isdir(base_path):
             print "Error in load_sounds: Path %s is not a directory" % base_path
@@ -51,12 +57,9 @@ class SoundHandler(object):
 
         old_dir = os.getcwd()
         os.chdir(base_path)
-        # todo pyglet can handle much mord filetypes as wave. Implement all formats
-        print "Load Sounds:"
+        # todo pyglet can handle much more filetypes as wave. Implement all formats
         for sound_file in glob.glob("*.wav"):
             sound_id = sound_file.split('.')[0]
-            print "Loading: %s" % os.path.join(base_path, sound_file)
             sound = pyglet.media.load(os.path.join(base_path, sound_file), streaming=False)
             self.sounds[sound_id] = Sound.Sound(sound_id=sound_id, sound=sound)
         os.chdir(old_dir)
-
