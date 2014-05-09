@@ -8,6 +8,7 @@
 
 from flask import Flask
 from flask.ext import restful
+from flask.ext.restful import reqparse, abort
 import SoundHandler as sh
 
 app = Flask(__name__)
@@ -27,16 +28,21 @@ class OctoBlaGeneral(restful.Resource):
 class OctoBlaSound(restful.Resource):
     def get(self):
         """Get all available sounds from the server."""
-        return soundhandler.get_ids()
+        if soundhandler.get_ids():
+            return soundhandler.get_ids()
+        else:
+            abort('404', message='No Sounds found')
 
     def put(self):
         """Add and Sound."""
         pass
 
     def delete(self, sound_id):
-        """Delete a sound from the Server"""
-        return '', 204
-        pass
+        """Removes a Sound from the Server. Until the next Restart."""
+        if soundhandler.delete_sound(sound_id):
+            return '', 204
+        else:
+            abort('404', message="No Sound {} found.".format(sound_id))
 
 
 class OctoBlaPlayer(restful.Resource):
@@ -46,19 +52,20 @@ class OctoBlaPlayer(restful.Resource):
         return "Done!", 201
 
 
-def main():
-    global soundhandler
+# Resource Routing
+api.add_resource(OctoBlaGeneral, "/general")
+api.add_resource(OctoBlaSound, '/sound/<string:sound_id>', '/sound')
+api.add_resource(OctoBlaPlayer, '/player/<string:sound_id>')
+
+parser = reqparse.RequestParser()
+parser.add_argument("sound_id", type=str, help="")
+
+if __name__ == "__main__":
     soundhandler = sh.SoundHandler()
 
-    # Resource Routing
-    api.add_resource(OctoBlaGeneral, "/general")
-    api.add_resource(OctoBlaSound, '/sound/<string:sound_id>')
-    api.add_resource(OctoBlaPlayer, '/player/<string:sound_id>')
 
     # debug. only accessible from localhost
     app.run(debug=True)
     # global accessible with optional ip range filter
     #app.run(host='0.0.0.0')
-
-if __name__ == "__main__":
     main()

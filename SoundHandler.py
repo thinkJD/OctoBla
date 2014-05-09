@@ -26,7 +26,6 @@ class SoundHandler(object):
     def play(self):
         if not self.sound_queue:
             return
-
         player = pyglet.media.Player()
         for sound in self.sound_queue:
             player.queue(sound)
@@ -39,7 +38,6 @@ class SoundHandler(object):
 
     def play_sound(self, sound_id):
         sound = self.__get_sound__(sound_id)
-
         player = pyglet.media.Player()
         player.queue(sound)
         player.play()
@@ -48,6 +46,13 @@ class SoundHandler(object):
 
     def get_ids(self):
         return self.sounds.keys()
+
+    def delete_sound(self, sound_id):
+        if sound_id in self.sounds:
+            del self.sounds[sound_id]
+            return True
+        else:
+            return False
 
     def __load_sounds__(self, base_path):
         """Load sounds from a given directory use the filename without extension as ID."""
