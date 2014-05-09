@@ -14,15 +14,16 @@ import SoundHandler as sh
 app = Flask(__name__)
 api = restful.Api(app)
 
-# constants
-VERSION = "0.0.1"
+# Constants
+VERSION = "0.1.0"
 
-# globals
+# Globals
 soundhandler = None
 
+# Resources
 class OctoBlaGeneral(restful.Resource):
     def get(self):
-        return VERSION
+        return "Version:{}".format(VERSION)
 
 
 class OctoBlaSound(restful.Resource):
@@ -42,30 +43,28 @@ class OctoBlaSound(restful.Resource):
         if soundhandler.delete_sound(sound_id):
             return '', 204
         else:
-            abort('404', message="No Sound {} found.".format(sound_id))
+            abort('404', message="Sound {} not found.".format(sound_id))
 
 
 class OctoBlaPlayer(restful.Resource):
     """Play one specific sound."""
     def put(self, sound_id):
-        soundhandler.play_sound(sound_id)
-        return "Done!", 201
+        if soundhandler.play_sound(sound_id):
+            return sound_id, 201
+        else:
+            abort('404', message='Sound {} not found'.format(sound_id))
 
 
 # Resource Routing
-api.add_resource(OctoBlaGeneral, "/general")
+api.add_resource(OctoBlaGeneral, "/")
 api.add_resource(OctoBlaSound, '/sound/<string:sound_id>', '/sound')
-api.add_resource(OctoBlaPlayer, '/player/<string:sound_id>')
-
-parser = reqparse.RequestParser()
-parser.add_argument("sound_id", type=str, help="")
+api.add_resource(OctoBlaPlayer, '/play/<string:sound_id>')
 
 if __name__ == "__main__":
     soundhandler = sh.SoundHandler()
 
-
-    # debug. only accessible from localhost
+    # only accessible from localhost
     app.run(debug=True)
+
     # global accessible with optional ip range filter
     #app.run(host='0.0.0.0')
-    main()

@@ -12,6 +12,46 @@ pyglet.options['shadow_window'] = False
 import os.path
 import glob
 import Sound
+import Queue as q
+import threading
+
+
+class PygletBackgroundWorkerCommand(object):
+    def __init__(self, command, args=None):
+        self.command = command
+        self.args = args
+
+
+class PygletBackgroundWorker(threading.Thread):
+    # Own thread for the pyglet stuff. Because own event loop and some
+    # other shit like blocking functions etc.
+    def __init__(self, queue):
+        threading.Thread.__init__(self)
+        self.terminate = False
+        self.queue = queue
+        self.player = None
+
+    def play_sound(self, sound):
+        self.player = pyglet.media.Player()
+        self.player.queue(sound)
+        self.player.play()
+        # i know EOS_PAUSE is the default value for eos_action
+        # but pyglet fuck me if i don't set it explicit
+        self.player.eos_action = self.player.EOS_PAUSE
+
+    def run(self):
+        while not self.terminate:
+            # without a item in the event queue the 'queue.get()' function
+            # will block. But we must call the pyglet event loop at the end.
+            if self.queue.qsize() > 0:
+                q_command = self.queue.get()
+                if q_command.command is "Terminate":
+                    self.terminate = True
+                elif q_command.command is "Play":
+                    self.play_sound(q_command.args)
+                self.queue.task_done()
+
+            pyglet.clock.tick()
 
 
 class SoundHandler(object):
@@ -19,33 +59,23 @@ class SoundHandler(object):
         self.sounds = dict()
         self.base_path = os.path.dirname(__file__)
         self.__load_sounds__(os.path.join(self.base_path, "Sounds"))
+        # todo max Queue size is nice but ... actually i don't handle the Exception
+        self.out_q = q.Queue(maxsize=10)
+        self.pyglet_thread = PygletBackgroundWorker(self.out_q)
+        self.pyglet_thread.start()
 
-    def __get_sound__(self, sound_id):
-        return self.sounds[sound_id].get_sound()
-
-    def play(self):
-        if not self.sound_queue:
-            return
-        player = pyglet.media.Player()
-        for sound in self.sound_queue:
-            player.queue(sound)
-        player.play()
-        self.__wait_for_player__(player)
-
-    def __wait_for_player__(self, player):
-        while player.playing:
-            pyglet.clock.tick()
+    def __del__(self):
+        # The terminate command hopefully kills the pyglet background thread
+        # hopefully because destructors are bad especially in python.
+        self.out_q.put(PygletBackgroundWorkerCommand("Terminate"))
 
     def play_sound(self, sound_id):
         sound = self.__get_sound__(sound_id)
-        player = pyglet.media.Player()
-        player.queue(sound)
-        player.play()
-        player.eos_action = player.EOS_PAUSE
-        self.__wait_for_player__(player)
-
-    def get_ids(self):
-        return self.sounds.keys()
+        if sound is None:
+            return False
+        else:
+            self.out_q.put(PygletBackgroundWorkerCommand("Play", sound))
+            return True
 
     def delete_sound(self, sound_id):
         if sound_id in self.sounds:
@@ -53,6 +83,15 @@ class SoundHandler(object):
             return True
         else:
             return False
+
+    def get_ids(self):
+        return self.sounds.keys()
+
+    def __get_sound__(self, sound_id):
+        if sound_id in self.sounds:
+            return self.sounds[sound_id].get_sound()
+        else:
+            return None
 
     def __load_sounds__(self, base_path):
         """Load sounds from a given directory use the filename without extension as ID."""
