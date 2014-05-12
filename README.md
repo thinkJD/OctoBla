@@ -19,7 +19,7 @@ API Description
     GET    -> Retrieves the current API Version
 
 ### Sounds
-    /sounds
+    /sound
     /sound/<string:sound_id>
 
     GET    -> Retrieves a list of all loaded ids
@@ -30,3 +30,9 @@ API Description
     /play/<string:sound_id>
   
     POST   -> Plays a specific sound
+
+### Volume
+    /volume/<float:volume>
+
+    GET    -> Retrieves the current volume
+    PUT    -> Set Volume the new value effects the next played song

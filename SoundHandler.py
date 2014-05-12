@@ -8,12 +8,14 @@
 
 import os
 import pyglet
+#pyglet.options['audio'] = ('directsound', 'silent')
 pyglet.options['shadow_window'] = False
 import os.path
 import glob
 import Sound
 import Queue as q
 import threading
+import time
 
 
 class PygletBackgroundWorkerCommand(object):
@@ -31,9 +33,10 @@ class PygletBackgroundWorker(threading.Thread):
         self.queue = queue
         self.player = None
 
-    def play_sound(self, sound):
+    def play_sound(self, sound, volume=1.0):
         self.player = pyglet.media.Player()
         self.player.queue(sound)
+        self.player.volume = volume
         self.player.play()
         # i know EOS_PAUSE is the default value for eos_action
         # but pyglet fuck me if i don't set it explicit
@@ -48,33 +51,44 @@ class PygletBackgroundWorker(threading.Thread):
                 if q_command.command is "Terminate":
                     self.terminate = True
                 elif q_command.command is "Play":
-                    self.play_sound(q_command.args)
+                    self.play_sound(*q_command.args)
+                elif q_command.command is "Volume":
+                    self.volume = q_command.args
                 self.queue.task_done()
-
+            time.sleep(5)  # slow down buddy
             pyglet.clock.tick()
 
 
 class SoundHandler(object):
-    def __init__(self):
+    def __init__(self, path_sounds):
         self.sounds = dict()
         self.base_path = os.path.dirname(__file__)
-        self.__load_sounds__(os.path.join(self.base_path, "Sounds"))
+        self.__load_sounds__(path_sounds)
         # todo max Queue size is nice but ... actually i don't handle the Exception
         self.out_q = q.Queue(maxsize=10)
         self.pyglet_thread = PygletBackgroundWorker(self.out_q)
         self.pyglet_thread.start()
+        self.__volume = 1.0  # default volume allowed values from 0.0 to 1.0
 
     def __del__(self):
         # The terminate command hopefully kills the pyglet background thread
         # hopefully because destructors are bad especially in python.
         self.out_q.put(PygletBackgroundWorkerCommand("Terminate"))
 
+    def get_volume(self):
+        return self.__volume
+
+    def set_volume(self, volume=1.0):
+        if volume > 1.0:
+            volume = 1.0
+        self.__volume = volume
+
     def play_sound(self, sound_id):
         sound = self.__get_sound__(sound_id)
         if sound is None:
             return False
         else:
-            self.out_q.put(PygletBackgroundWorkerCommand("Play", sound))
+            self.out_q.put(PygletBackgroundWorkerCommand("Play", [sound, self.__volume]))
             return True
 
     def delete_sound(self, sound_id):
@@ -102,8 +116,8 @@ class SoundHandler(object):
         old_dir = os.getcwd()
         os.chdir(base_path)
         # todo pyglet can handle much more filetypes as wave. Implement all formats
-        for sound_file in glob.glob("*.wav"):
+        for sound_file in glob.glob("*.MP3"):
             sound_id = sound_file.split('.')[0]
-            sound = pyglet.media.load(os.path.join(base_path, sound_file), streaming=False)
+            sound = pyglet.media.load(os.path.join(base_path, sound_file), streaming=True)
             self.sounds[sound_id] = Sound.Sound(sound_id=sound_id, sound=sound)
         os.chdir(old_dir)
